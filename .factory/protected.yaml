@@ -1,0 +1,4 @@
+protected_paths:
+  - ".factory/**"
+  - ".github/**"
+  - "CODEOWNERS"

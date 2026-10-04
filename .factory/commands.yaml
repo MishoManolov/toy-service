@@ -1,0 +1,8 @@
+setup: uv sync
+format:
+  - glob: "**/*.py"
+    run: uv run ruff format {files}
+lint: uv run ruff check .
+typecheck: null
+test: uv run pytest
+gates: [lint, test]

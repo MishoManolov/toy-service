@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+import secrets
+import string
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from urllib.parse import urlparse
+
+ALPHABET = string.ascii_letters + string.digits
+CODE_LENGTH = 6
+
+
+class InvalidUrlError(ValueError):
+    pass
+
+
+class UnknownCodeError(KeyError):
+    pass
+
+
+@dataclass
+class Link:
+    code: str
+    url: str
+    created_at: float
+    expires_at: float | None = None
+    hits: int = 0
+
+
+def random_code() -> str:
+    return "".join(secrets.choice(ALPHABET) for _ in range(CODE_LENGTH))
+
+
+class Shortener:
+    def __init__(
+        self,
+        clock: Callable[[], float] = time.time,
+        code_factory: Callable[[], str] = random_code,
+    ) -> None:
+        self._links: dict[str, Link] = {}
+        self._clock = clock
+        self._code_factory = code_factory
+
+    def shorten(self, url: str, ttl: float | None = None) -> Link:
+        if not urlparse(url).scheme:
+            raise InvalidUrlError(url)
+        now = self._clock()
+        code = self._code_factory()
+        expires_at = now + ttl if ttl is not None else None
+        link = Link(code, url, now, expires_at)
+        self._links[code] = link
+        return link
+
+    def resolve(self, code: str) -> str:
+        link = self._get(code)
+        link.hits += 1
+        if link.expires_at is not None and self._clock() > link.expires_at:
+            raise UnknownCodeError(code)
+        return link.url
+
+    def stats(self, code: str) -> Link:
+        return self._get(code)
+
+    def delete(self, code: str) -> None:
+        self._get(code)
+        del self._links[code]
+
+    def _get(self, code: str) -> Link:
+        try:
+            return self._links[code]
+        except KeyError:
+            raise UnknownCodeError(code) from None
