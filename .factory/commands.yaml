@@ -5,4 +5,5 @@ format:
 lint: uv run ruff check .
 typecheck: null
 test: uv run pytest
+test_files: uv run pytest {files}
 gates: [lint, test]
