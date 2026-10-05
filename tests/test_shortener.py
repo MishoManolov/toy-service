@@ -52,3 +52,12 @@ def test_link_expires_well_after_ttl() -> None:
     clock.now += 100
     with pytest.raises(UnknownCodeError):
         s.resolve(link.code)
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["javascript:alert(1)", "file:///etc/passwd", "http://", "https:///path", "ftp://example.com"],
+)
+def test_non_web_urls_rejected(url: str) -> None:
+    with pytest.raises(InvalidUrlError):
+        Shortener().shorten(url)
