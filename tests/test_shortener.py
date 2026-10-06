@@ -52,3 +52,12 @@ def test_link_expires_well_after_ttl() -> None:
     clock.now += 100
     with pytest.raises(UnknownCodeError):
         s.resolve(link.code)
+
+
+def test_link_expires_at_exact_ttl_boundary() -> None:
+    clock = Clock()
+    s = Shortener(clock=clock)
+    link = s.shorten("https://example.com", ttl=10)
+    clock.now += 10
+    with pytest.raises(UnknownCodeError):
+        s.resolve(link.code)

@@ -55,7 +55,7 @@ class Shortener:
     def resolve(self, code: str) -> str:
         link = self._get(code)
         link.hits += 1
-        if link.expires_at is not None and self._clock() > link.expires_at:
+        if link.expires_at is not None and self._clock() >= link.expires_at:
             raise UnknownCodeError(code)
         return link.url
 
