@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import secrets
 import string
 import time
@@ -9,9 +10,18 @@ from urllib.parse import urlparse
 
 ALPHABET = string.ascii_letters + string.digits
 CODE_LENGTH = 6
+ALIAS_PATTERN = re.compile(r"^[A-Za-z0-9_-]{3,32}$")
 
 
 class InvalidUrlError(ValueError):
+    pass
+
+
+class InvalidAliasError(ValueError):
+    pass
+
+
+class AliasTakenError(Exception):
     pass
 
 
@@ -42,11 +52,20 @@ class Shortener:
         self._clock = clock
         self._code_factory = code_factory
 
-    def shorten(self, url: str, ttl: float | None = None) -> Link:
+    def shorten(self, url: str, ttl: float | None = None, alias: str | None = None) -> Link:
         if not urlparse(url).scheme:
             raise InvalidUrlError(url)
+        if alias is not None:
+            if not ALIAS_PATTERN.fullmatch(alias):
+                raise InvalidAliasError(alias)
+            if alias in self._links:
+                raise AliasTakenError(alias)
+            code = alias
+        else:
+            code = self._code_factory()
+            while code in self._links:
+                code = self._code_factory()
         now = self._clock()
-        code = self._code_factory()
         expires_at = now + ttl if ttl is not None else None
         link = Link(code, url, now, expires_at)
         self._links[code] = link
