@@ -27,3 +27,8 @@ def test_invalid_url_is_400() -> None:
     body = json.dumps({"url": "nope"}).encode()
     status, _, _ = call(create_app(Shortener()), "POST", "/shorten", body)
     assert status.startswith("400")
+
+
+def test_empty_body_is_400() -> None:
+    status, _, _ = call(create_app(Shortener()), "POST", "/shorten", b"")
+    assert status.startswith("400")
