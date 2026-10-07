@@ -24,10 +24,14 @@ def _respond(
 
 def create_app(shortener: Shortener, base_url: str = "http://localhost:8000") -> WsgiApp:
     def shorten(environ: WSGIEnvironment, start_response: StartResponse) -> list[bytes]:
-        size = int(environ.get("CONTENT_LENGTH") or 0)
-        payload = json.loads(environ["wsgi.input"].read(size))
         try:
-            link = shortener.shorten(payload["url"], payload.get("ttl"))
+            size = int(environ.get("CONTENT_LENGTH") or 0)
+            payload = json.loads(environ["wsgi.input"].read(size))
+            url = payload["url"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            return _respond(start_response, "400 Bad Request", {"error": "invalid request"})
+        try:
+            link = shortener.shorten(url, payload.get("ttl"))
         except InvalidUrlError:
             return _respond(start_response, "400 Bad Request", {"error": "invalid url"})
         body = {"code": link.code, "short_url": f"{base_url}/{link.code}"}
