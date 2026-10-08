@@ -34,7 +34,7 @@ def create_app(shortener: Shortener, base_url: str = "http://localhost:8000") ->
             size = int(environ.get("CONTENT_LENGTH") or 0)
             payload = json.loads(environ["wsgi.input"].read(size))
             url = payload["url"]
-        except (json.JSONDecodeError, KeyError, TypeError):
+        except (ValueError, KeyError, TypeError):
             return _respond(start_response, "400 Bad Request", {"error": "invalid request"})
         try:
             link = shortener.shorten(url, payload.get("ttl"), payload.get("alias"))

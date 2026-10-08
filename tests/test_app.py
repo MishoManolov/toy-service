@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from tests.helpers import call
 from toy_service.app import create_app
 from toy_service.shortener import Shortener
@@ -73,3 +75,13 @@ def test_no_alias_still_works() -> None:
     assert status.startswith("201")
     assert data is not None
     assert data["code"]
+
+
+@pytest.mark.parametrize(
+    "body",
+    [b"{not json", b"", b"[1, 2]", b'{"nope": 1}', b"\xff\xfe\x00", b'"text"', b"null"],
+)
+def test_bad_request_bodies_are_400(body: bytes) -> None:
+    status, _, payload = call(create_app(Shortener()), "POST", "/shorten", body)
+    assert status.startswith("400")
+    assert payload == {"error": "invalid request"}
