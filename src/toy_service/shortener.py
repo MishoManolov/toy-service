@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 
 ALPHABET = string.ascii_letters + string.digits
 CODE_LENGTH = 6
+ALIAS_ALPHABET = ALPHABET + "-_"
+MAX_ALIAS_LENGTH = 32
 
 
 class InvalidUrlError(ValueError):
@@ -16,6 +18,14 @@ class InvalidUrlError(ValueError):
 
 
 class UnknownCodeError(KeyError):
+    pass
+
+
+class InvalidAliasError(ValueError):
+    pass
+
+
+class AliasTakenError(ValueError):
     pass
 
 
@@ -42,11 +52,21 @@ class Shortener:
         self._clock = clock
         self._code_factory = code_factory
 
-    def shorten(self, url: str, ttl: float | None = None) -> Link:
+    def shorten(self, url: str, ttl: float | None = None, alias: str | None = None) -> Link:
         if not urlparse(url).scheme:
             raise InvalidUrlError(url)
+        if alias is not None:
+            if (
+                not isinstance(alias, str)
+                or not alias
+                or len(alias) > MAX_ALIAS_LENGTH
+                or any(c not in ALIAS_ALPHABET for c in alias)
+            ):
+                raise InvalidAliasError(alias)
+            if alias in self._links:
+                raise AliasTakenError(alias)
         now = self._clock()
-        code = self._code_factory()
+        code = alias if alias is not None else self._code_factory()
         expires_at = now + ttl if ttl is not None else None
         link = Link(code, url, now, expires_at)
         self._links[code] = link
