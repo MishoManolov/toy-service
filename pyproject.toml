@@ -13,7 +13,7 @@ build-backend = "hatchling.build"
 packages = ["src/toy_service"]
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pyright>=1.1.380", "pytest>=8", "ruff>=0.6"]
 
 [tool.ruff]
 line-length = 100
@@ -26,3 +26,8 @@ select = ["E", "F", "I", "B", "UP"]
 testpaths = ["tests"]
 addopts = "-q"
 pythonpath = ["."]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
