@@ -108,3 +108,10 @@ def test_no_alias_uses_code_factory() -> None:
 def test_non_web_url_rejected(url: str) -> None:
     with pytest.raises(InvalidUrlError):
         Shortener().shorten(url)
+
+
+def test_surrounding_whitespace_is_stripped() -> None:
+    s = Shortener()
+    link = s.shorten(" \thttps://example.com/a \n")
+    assert link.url == "https://example.com/a"
+    assert s.resolve(link.code) == "https://example.com/a"

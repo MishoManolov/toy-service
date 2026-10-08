@@ -53,6 +53,8 @@ class Shortener:
         self._code_factory = code_factory
 
     def shorten(self, url: str, ttl: float | None = None, alias: str | None = None) -> Link:
+        if isinstance(url, str):
+            url = url.strip()
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https") or not parsed.hostname:
             raise InvalidUrlError(url)
