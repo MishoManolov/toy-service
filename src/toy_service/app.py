@@ -5,7 +5,13 @@ from collections.abc import Callable, Iterable
 from typing import Any
 from wsgiref.types import StartResponse, WSGIEnvironment
 
-from toy_service.shortener import InvalidUrlError, Shortener, UnknownCodeError
+from toy_service.shortener import (
+    AliasTakenError,
+    InvalidAliasError,
+    InvalidUrlError,
+    Shortener,
+    UnknownCodeError,
+)
 
 WsgiApp = Callable[[WSGIEnvironment, StartResponse], Iterable[bytes]]
 
@@ -31,9 +37,13 @@ def create_app(shortener: Shortener, base_url: str = "http://localhost:8000") ->
         except (json.JSONDecodeError, KeyError, TypeError):
             return _respond(start_response, "400 Bad Request", {"error": "invalid request"})
         try:
-            link = shortener.shorten(url, payload.get("ttl"))
+            link = shortener.shorten(url, payload.get("ttl"), payload.get("alias"))
         except InvalidUrlError:
             return _respond(start_response, "400 Bad Request", {"error": "invalid url"})
+        except InvalidAliasError:
+            return _respond(start_response, "400 Bad Request", {"error": "invalid alias"})
+        except AliasTakenError:
+            return _respond(start_response, "409 Conflict", {"error": "alias taken"})
         body = {"code": link.code, "short_url": f"{base_url}/{link.code}"}
         return _respond(start_response, "201 Created", body)
 
