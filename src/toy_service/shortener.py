@@ -70,6 +70,9 @@ class Shortener:
                 raise AliasTakenError(alias)
         now = self._clock()
         code = alias if alias is not None else self._code_factory()
+        # Regenerate code if collision occurs (only for random codes, not aliases)
+        while code in self._links and alias is None:
+            code = self._code_factory()
         expires_at = now + ttl if ttl is not None else None
         link = Link(code, url, now, expires_at)
         self._links[code] = link
