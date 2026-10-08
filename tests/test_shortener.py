@@ -60,6 +60,15 @@ def test_link_expires_well_after_ttl() -> None:
         s.resolve(link.code)
 
 
+def test_link_expires_at_exact_ttl_moment() -> None:
+    clock = Clock()
+    s = Shortener(clock=clock)
+    link = s.shorten("https://example.com", ttl=10)
+    clock.now += 10
+    with pytest.raises(UnknownCodeError):
+        s.resolve(link.code)
+
+
 def test_alias_used_as_code_and_resolves() -> None:
     s = Shortener()
     link = s.shorten("https://example.com/a", alias="my-link_1")
