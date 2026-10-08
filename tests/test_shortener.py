@@ -99,3 +99,12 @@ def test_non_string_alias_rejected() -> None:
 def test_no_alias_uses_code_factory() -> None:
     s = Shortener(code_factory=lambda: "gen123")
     assert s.shorten("https://example.com").code == "gen123"
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["javascript:alert(1)", "file:///etc/passwd", "http://", "https:///path", "ftp://example.com"],
+)
+def test_non_web_url_rejected(url: str) -> None:
+    with pytest.raises(InvalidUrlError):
+        Shortener().shorten(url)
