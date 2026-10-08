@@ -124,3 +124,26 @@ def test_surrounding_whitespace_is_stripped() -> None:
     link = s.shorten(" \thttps://example.com/a \n")
     assert link.url == "https://example.com/a"
     assert s.resolve(link.code) == "https://example.com/a"
+
+
+def test_collision_in_random_code_keeps_first_link() -> None:
+    """When code_factory returns a code already in use, both links should work."""
+    codes = ["ABC123", "ABC123", "XYZ789"]  # Collision on second call
+    code_iter = iter(codes)
+
+    def fixed_code_factory() -> str:
+        return next(code_iter)
+
+    s = Shortener(code_factory=fixed_code_factory)
+    link1 = s.shorten("https://example.com/first")
+    link2 = s.shorten("https://example.com/second")
+
+    # Both links should work; link1 should keep the original code
+    assert link1.code == "ABC123"
+    assert link1.url == "https://example.com/first"
+    assert s.resolve("ABC123") == "https://example.com/first"
+
+    # link2 should get a different code (regenerated after collision)
+    assert link2.code == "XYZ789"
+    assert link2.url == "https://example.com/second"
+    assert s.resolve("XYZ789") == "https://example.com/second"
