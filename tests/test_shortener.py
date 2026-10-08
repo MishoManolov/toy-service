@@ -147,3 +147,19 @@ def test_collision_in_random_code_keeps_first_link() -> None:
     assert link2.code == "XYZ789"
     assert link2.url == "https://example.com/second"
     assert s.resolve("XYZ789") == "https://example.com/second"
+
+
+def test_expired_link_does_not_count_hits() -> None:
+    clock = Clock()
+    s = Shortener(clock=clock)
+    link = s.shorten("https://example.com", ttl=10)
+    # Resolve before expiration - should count as hit
+    s.resolve(link.code)
+    assert s.stats(link.code).hits == 1
+    # Advance past expiration
+    clock.now += 10
+    # Try to resolve - should raise UnknownCodeError
+    with pytest.raises(UnknownCodeError):
+        s.resolve(link.code)
+    # Hit count should still be 1, not 2
+    assert s.stats(link.code).hits == 1
