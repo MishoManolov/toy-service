@@ -13,5 +13,6 @@ Tiny in-memory URL shortener. Sample target for the software factory.
 - Malformed or incomplete request bodies are a 400, never a 500.
 - Every link gets a unique code. Creating a link never replaces an existing one.
 - `GET /<code>` returns 302 with a `Location` header.
+- `GET /<code>/stats` returns 200 `{"code", "url", "hits", "created_at", "expires_at"}` (`expires_at` is null without a ttl). It does not count as a hit. Unknown or expired codes are a 404 `{"error": "unknown code"}`.
 - A link with a ttl is expired from the moment `created_at + ttl` is reached. Expired links behave like unknown links (404).
 - A hit is counted only when a link resolves successfully.

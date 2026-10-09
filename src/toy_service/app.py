@@ -54,12 +54,29 @@ def create_app(shortener: Shortener, base_url: str = "http://localhost:8000") ->
             return _respond(start_response, "404 Not Found", {"error": "unknown code"})
         return _respond(start_response, "302 Found", None, [("Location", url)])
 
+    def stats(code: str, start_response: StartResponse) -> list[bytes]:
+        try:
+            link = shortener.stats(code)
+        except UnknownCodeError:
+            return _respond(start_response, "404 Not Found", {"error": "unknown code"})
+        body = {
+            "code": link.code,
+            "url": link.url,
+            "hits": link.hits,
+            "created_at": link.created_at,
+            "expires_at": link.expires_at,
+        }
+        return _respond(start_response, "200 OK", body)
+
     def app(environ: WSGIEnvironment, start_response: StartResponse) -> list[bytes]:
         method, path = environ["REQUEST_METHOD"], environ["PATH_INFO"]
         if method == "POST" and path == "/shorten":
             return shorten(environ, start_response)
         if method == "GET" and path.count("/") == 1 and len(path) > 1:
             return redirect(path[1:], start_response)
+        parts = path.split("/")
+        if method == "GET" and len(parts) == 3 and parts[1] and parts[2] == "stats":
+            return stats(parts[1], start_response)
         return _respond(start_response, "404 Not Found", {"error": "not found"})
 
     return app

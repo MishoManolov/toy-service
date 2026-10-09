@@ -5,8 +5,15 @@ import json
 import pytest
 
 from tests.helpers import call
-from toy_service.app import create_app
+from toy_service.app import WsgiApp, create_app
 from toy_service.shortener import Shortener
+
+
+class _Clock:
+    now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
 
 
 def test_create_and_redirect() -> None:
@@ -85,3 +92,71 @@ def test_bad_request_bodies_are_400(body: bytes) -> None:
     status, _, payload = call(create_app(Shortener()), "POST", "/shorten", body)
     assert status.startswith("400")
     assert payload == {"error": "invalid request"}
+
+
+def _shorten(app: WsgiApp, **extra: object) -> str:
+    body = json.dumps({"url": "https://example.com/x", **extra}).encode()
+    _, _, data = call(app, "POST", "/shorten", body)
+    assert data is not None
+    return str(data["code"])
+
+
+def test_stats_body_without_ttl() -> None:
+    clock = _Clock()
+    app = create_app(Shortener(clock=clock))
+    code = _shorten(app)
+    status, _, data = call(app, "GET", f"/{code}/stats")
+    assert status.startswith("200")
+    assert data == {
+        "code": code,
+        "url": "https://example.com/x",
+        "hits": 0,
+        "created_at": 1000.0,
+        "expires_at": None,
+    }
+
+
+def test_stats_body_with_ttl() -> None:
+    app = create_app(Shortener(clock=_Clock()))
+    code = _shorten(app, ttl=60)
+    _, _, data = call(app, "GET", f"/{code}/stats")
+    assert data is not None
+    assert data["created_at"] == 1000.0
+    assert data["expires_at"] == 1060.0
+
+
+def test_stats_does_not_count_hits_but_redirect_does() -> None:
+    app = create_app(Shortener())
+    code = _shorten(app)
+    for _ in range(3):
+        _, _, data = call(app, "GET", f"/{code}/stats")
+        assert data is not None
+        assert data["hits"] == 0
+    call(app, "GET", f"/{code}")
+    _, _, data = call(app, "GET", f"/{code}/stats")
+    assert data is not None
+    assert data["hits"] == 1
+
+
+def test_stats_unknown_code_is_404() -> None:
+    status, _, data = call(create_app(Shortener()), "GET", "/missing/stats")
+    assert status.startswith("404")
+    assert data == {"error": "unknown code"}
+
+
+def test_stats_expired_code_is_404() -> None:
+    clock = _Clock()
+    app = create_app(Shortener(clock=clock))
+    code = _shorten(app, ttl=10)
+    clock.now += 10
+    status, _, data = call(app, "GET", f"/{code}/stats")
+    assert status.startswith("404")
+    assert data == {"error": "unknown code"}
+
+
+def test_get_stats_path_is_still_code_stats() -> None:
+    app = create_app(Shortener())
+    code = _shorten(app, alias="stats")
+    assert code == "stats"
+    status, _, _ = call(app, "GET", "/stats")
+    assert status.startswith("302")
