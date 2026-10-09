@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+from collections.abc import Callable
 from typing import Any
 from wsgiref.util import setup_testing_defaults
 
@@ -17,8 +18,11 @@ def call(
     environ["CONTENT_LENGTH"] = str(len(body))
     seen: dict[str, Any] = {}
 
-    def start_response(status: str, headers: list[tuple[str, str]]) -> None:
+    def start_response(
+        status: str, headers: list[tuple[str, str]], exc_info: Any = None, /
+    ) -> Callable[[bytes], object]:
         seen["status"], seen["headers"] = status, dict(headers)
+        return lambda data: None
 
     raw = b"".join(app(environ, start_response))
     return seen["status"], seen["headers"], json.loads(raw) if raw else None
