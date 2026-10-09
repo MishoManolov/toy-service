@@ -87,7 +87,10 @@ class Shortener:
         return link.url
 
     def stats(self, code: str) -> Link:
-        return self._get(code)
+        link = self._get(code)
+        if link.expires_at is not None and self._clock() >= link.expires_at:
+            raise UnknownCodeError(code)
+        return link
 
     def delete(self, code: str) -> None:
         self._get(code)

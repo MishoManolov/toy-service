@@ -91,7 +91,7 @@ def test_expired_alias_is_still_taken() -> None:
     clock.now += 100
     with pytest.raises(AliasTakenError):
         s.shorten("https://example.com/b", alias="old")
-    assert s.stats("old").url == "https://example.com/a"
+    assert s._links["old"].url == "https://example.com/a"
 
 
 @pytest.mark.parametrize("alias", ["", "a", "ab", "has space", "a/b", "ünï", "x" * 33])
@@ -167,4 +167,32 @@ def test_expired_link_does_not_count_hits() -> None:
     with pytest.raises(UnknownCodeError):
         s.resolve(link.code)
     # Hit count should still be 1, not 2
-    assert s.stats(link.code).hits == 1
+    assert s._links[link.code].hits == 1
+
+
+def test_stats_does_not_change_hits() -> None:
+    s = Shortener()
+    link = s.shorten("https://example.com")
+    s.stats(link.code)
+    s.stats(link.code)
+    assert s.stats(link.code).hits == 0
+
+
+def test_stats_unknown_code_raises() -> None:
+    with pytest.raises(UnknownCodeError):
+        Shortener().stats("nope")
+
+
+def test_stats_expired_code_raises() -> None:
+    clock = Clock()
+    s = Shortener(clock=clock)
+    link = s.shorten("https://example.com", ttl=10)
+    clock.now += 10
+    with pytest.raises(UnknownCodeError):
+        s.stats(link.code)
+
+
+def test_stats_without_ttl_has_no_expiry() -> None:
+    s = Shortener()
+    link = s.shorten("https://example.com")
+    assert s.stats(link.code).expires_at is None
