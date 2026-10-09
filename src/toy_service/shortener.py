@@ -7,11 +7,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from toy_service.storage import InMemoryLinkStore, LinkStore
+
 ALPHABET = string.ascii_letters + string.digits
 CODE_LENGTH = 6
 ALIAS_ALPHABET = ALPHABET + "-_"
 MIN_ALIAS_LENGTH = 3
 MAX_ALIAS_LENGTH = 32
+MAX_CODE_ATTEMPTS = 10
 
 
 class InvalidUrlError(ValueError):
@@ -48,10 +51,16 @@ class Shortener:
         self,
         clock: Callable[[], float] = time.time,
         code_factory: Callable[[], str] = random_code,
+        store: LinkStore | None = None,
     ) -> None:
-        self._links: dict[str, Link] = {}
+        self._store: LinkStore = store if store is not None else InMemoryLinkStore()
         self._clock = clock
         self._code_factory = code_factory
+
+    @property
+    def _links(self) -> dict[str, Link]:
+        # Kept for tests that inspect the in-memory store directly.
+        return getattr(self._store, "_links", {})
 
     def shorten(self, url: str, ttl: float | None = None, alias: str | None = None) -> Link:
         if isinstance(url, str):
@@ -67,23 +76,24 @@ class Shortener:
                 or any(c not in ALIAS_ALPHABET for c in alias)
             ):
                 raise InvalidAliasError(alias)
-            if alias in self._links:
-                raise AliasTakenError(alias)
         now = self._clock()
-        code = alias if alias is not None else self._code_factory()
-        # Regenerate code if collision occurs (only for random codes, not aliases)
-        while code in self._links and alias is None:
-            code = self._code_factory()
         expires_at = now + ttl if ttl is not None else None
-        link = Link(code, url, now, expires_at)
-        self._links[code] = link
-        return link
+        if alias is not None:
+            link = Link(alias, url, now, expires_at)
+            if not self._store.add(link):
+                raise AliasTakenError(alias)
+            return link
+        for _ in range(MAX_CODE_ATTEMPTS):
+            link = Link(self._code_factory(), url, now, expires_at)
+            if self._store.add(link):
+                return link
+        raise RuntimeError("could not generate a unique code")
 
     def resolve(self, code: str) -> str:
         link = self._get(code)
         if link.expires_at is not None and self._clock() >= link.expires_at:
             raise UnknownCodeError(code)
-        link.hits += 1
+        self._store.record_hit(code)
         return link.url
 
     def stats(self, code: str) -> Link:
@@ -94,10 +104,10 @@ class Shortener:
 
     def delete(self, code: str) -> None:
         self._get(code)
-        del self._links[code]
+        self._store.delete(code)
 
     def _get(self, code: str) -> Link:
-        try:
-            return self._links[code]
-        except KeyError:
-            raise UnknownCodeError(code) from None
+        link = self._store.get(code)
+        if link is None:
+            raise UnknownCodeError(code)
+        return link
