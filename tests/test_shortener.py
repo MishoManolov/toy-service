@@ -196,3 +196,12 @@ def test_stats_without_ttl_has_no_expiry() -> None:
     s = Shortener()
     link = s.shorten("https://example.com")
     assert s.stats(link.code).expires_at is None
+
+
+def test_colliding_generated_code_does_not_overwrite() -> None:
+    codes = iter(["abcdef", "abcdef", "ghijkl"])
+    s = Shortener(code_factory=lambda: next(codes))
+    first = s.shorten("https://example.com/first")
+    second = s.shorten("https://example.com/second")
+    assert second.code == "ghijkl"
+    assert s.resolve(first.code) == "https://example.com/first"
