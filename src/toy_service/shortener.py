@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 ALPHABET = string.ascii_letters + string.digits
 CODE_LENGTH = 6
 ALIAS_ALPHABET = ALPHABET + "-_"
+MIN_ALIAS_LENGTH = 3
 MAX_ALIAS_LENGTH = 32
 
 
@@ -61,7 +62,7 @@ class Shortener:
         if alias is not None:
             if (
                 not isinstance(alias, str)
-                or not alias
+                or len(alias) < MIN_ALIAS_LENGTH
                 or len(alias) > MAX_ALIAS_LENGTH
                 or any(c not in ALIAS_ALPHABET for c in alias)
             ):

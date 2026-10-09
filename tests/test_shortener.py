@@ -94,10 +94,15 @@ def test_expired_alias_is_still_taken() -> None:
     assert s.stats("old").url == "https://example.com/a"
 
 
-@pytest.mark.parametrize("alias", ["", "has space", "a/b", "ünï", "x" * 33])
+@pytest.mark.parametrize("alias", ["", "a", "ab", "has space", "a/b", "ünï", "x" * 33])
 def test_invalid_alias_rejected(alias: str) -> None:
     with pytest.raises(InvalidAliasError):
         Shortener().shorten("https://example.com", alias=alias)
+
+
+@pytest.mark.parametrize("alias", ["abc", "x" * 32])
+def test_alias_length_boundaries_accepted(alias: str) -> None:
+    assert Shortener().shorten("https://example.com", alias=alias).code == alias
 
 
 def test_non_string_alias_rejected() -> None:

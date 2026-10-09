@@ -64,7 +64,7 @@ def test_duplicate_alias_is_409_and_original_resolves() -> None:
 
 def test_invalid_alias_is_400() -> None:
     app = create_app(Shortener())
-    for alias in ["bad alias", "", "a" * 33, "a/b", 123, ["x"], True]:
+    for alias in ["bad alias", "", "ab", "a" * 33, "a/b", 123, ["x"], True]:
         status, _, data = _post(app, {"url": "https://example.com", "alias": alias})
         assert status.startswith("400"), alias
         assert data == {"error": "invalid alias"}
