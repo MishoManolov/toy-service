@@ -1,9 +1,11 @@
 # toy-service
 
-Tiny in-memory URL shortener. Sample target for the software factory.
+Tiny URL shortener backed by SQLite. Sample target for the software factory.
 
 ## Run
 `uv run python -m toy_service` serves on http://127.0.0.1:8000.
+
+Links are stored in a SQLite file at the path in the `TOY_SERVICE_DB` environment variable (default `toy_service.db` in the working directory). Links, hits and ttl expiry survive restarts.
 
 ## Behaviour
 - `POST /shorten` with JSON `{"url": "...", "ttl": seconds (optional)}` returns 201 `{"code", "short_url"}`.
