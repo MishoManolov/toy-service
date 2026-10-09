@@ -7,7 +7,7 @@ Tiny in-memory URL shortener. Sample target for the software factory.
 
 ## Behaviour
 - `POST /shorten` with JSON `{"url": "...", "ttl": seconds (optional)}` returns 201 `{"code", "short_url"}`.
-- An optional `"alias"` sets a custom code: 1-32 characters from `A-Z a-z 0-9 - _`. An invalid or non-string alias is a 400 `{"error": "invalid alias"}`; an alias already in use is a 409 `{"error": "alias taken"}`. The returned `code` equals the alias.
+- An optional `"alias"` sets a custom code: 3-32 characters from `A-Z a-z 0-9 - _`. An invalid or non-string alias is a 400 `{"error": "invalid alias"}`; an alias already in use is a 409 `{"error": "alias taken"}`. The returned `code` equals the alias.
 - Only absolute `http` and `https` URLs with a host are accepted. Anything else is a 400.
 - Leading and trailing whitespace around the URL is ignored.
 - Malformed or incomplete request bodies are a 400, never a 500.
